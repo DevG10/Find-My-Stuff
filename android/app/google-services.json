@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "857001711912",
+    "project_id": "find-my-stuff-d0957",
+    "storage_bucket": "find-my-stuff-d0957.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:857001711912:android:10ff0786daa8c976cdd81d",
+        "android_client_info": {
+          "package_name": "com.example.untitled"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "857001711912-lsl0vg4b63fr1e0iq3shdh0rhblo6489.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWEsEQKDVMWOo-2TuzxWzqJiS5Lmq7NaI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "857001711912-lsl0vg4b63fr1e0iq3shdh0rhblo6489.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
