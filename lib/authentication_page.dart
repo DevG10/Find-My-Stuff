@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'home_page.dart';
 
@@ -11,16 +12,46 @@ class AuthenticationPage extends StatefulWidget {
 }
 
 class _AuthenticationPageState extends State<AuthenticationPage> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  late final TextEditingController _emailController = TextEditingController();
+  late final TextEditingController _passwordController =
+      TextEditingController();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _firebaseAuth.setPersistence(Persistence.LOCAL);
+    checkLoginStatus();
+  }
+
+  Future<void> checkLoginStatus() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    if (isLoggedIn) {
+      // User is already logged in, navigate to the home page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    }
+  }
 
   Future<void> _signIn() async {
     try {
       final String email = _emailController.text.trim();
       final String password = _passwordController.text.trim();
-
-      // Sign in with email and password
+      setState(() {
+        _isLoading = true;
+      });
       final UserCredential userCredential =
           await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
@@ -28,46 +59,25 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
       );
 
       if (userCredential.user != null) {
-        // Navigate to the home page after successful sign-in
+        // Store login status
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => HomePage()),
+          MaterialPageRoute(builder: (context) => const HomePage()),
         );
       } else {
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Sign-in Failed'),
-              content:
-                  const Text('Invalid email or password. Please try again.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
+        showAlertDialog(
+            'Sign-in Failed', 'Invalid email or password. Please try again.');
       }
     } catch (e) {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Sign-in Failed'),
-            content: const Text(
-                'An error occurred during sign-in. Please try again.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
+      showAlertDialog('Sign-in Failed',
+          'An error occurred during sign-in. Please try again.');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -75,8 +85,10 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
     try {
       final String email = _emailController.text.trim();
       final String password = _passwordController.text.trim();
+      setState(() {
+        _isLoading = true;
+      });
 
-      // Create a new user with email and password
       final UserCredential userCredential =
           await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
@@ -84,63 +96,51 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
       );
 
       if (userCredential.user != null) {
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Success'),
-              content: const Text('Successfully signed up.'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context); // Close the dialog
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => HomePage()),
-                    ); // Navigate to the main screen
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
+        // Store login status
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+
+        showAlertDialog('Success', 'Successfully signed up.', () {
+          Navigator.pop(context); // Close the dialog
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        });
       } else {
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Sign-up Failed'),
-              content: const Text(
-                  'An error occurred during sign-up. Please try again.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
+        showAlertDialog('Sign-up Failed',
+            'An error occurred during sign-up. Please try again.');
       }
     } catch (e) {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Sign-up Failed'),
-            content: const Text(
-                'An error occurred during sign-up. Please try again.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
+      showAlertDialog('Sign-up Failed',
+          'An error occurred during sign-up. Please try again.');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
+  }
+
+  void showAlertDialog(String title, String content,
+      [VoidCallback? onPressed]) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                onPressed?.call();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -164,13 +164,38 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
               obscureText: true,
             ),
             const SizedBox(height: 16.0),
-            ElevatedButton(
-              onPressed: _signIn,
-              child: const Text('Sign In'),
+            Stack(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  // Set the button width to match the parent's width
+                  height: 35.0,
+                  child: ElevatedButton(
+                    onPressed: _signIn,
+                    child: const Text(
+                      'Sign In',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_isLoading)
+                  const Positioned.fill(
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+              ],
             ),
             ElevatedButton(
               onPressed: _signUp,
-              child: const Text('Sign Up'),
+              child: const Text(
+                'Sign Up',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
